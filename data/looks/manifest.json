@@ -59,35 +59,35 @@
     },
     {
       "id": "tubes-gold",
-      "title": "Light Tubes · Gold",
+      "title": "Light Tubes \u00b7 Gold",
       "family": "tubes",
       "file": "tubes-gold.html",
       "built": "2026-09-30T05:07:31.983Z"
     },
     {
       "id": "tubes-ice",
-      "title": "Light Tubes · Ice",
+      "title": "Light Tubes \u00b7 Ice",
       "family": "tubes",
       "file": "tubes-ice.html",
       "built": "2026-09-30T05:07:31.983Z"
     },
     {
       "id": "tubes-rainbow",
-      "title": "Light Tubes · Rainbow",
+      "title": "Light Tubes \u00b7 Rainbow",
       "family": "tubes",
       "file": "tubes-rainbow.html",
       "built": "2026-09-30T05:07:31.983Z"
     },
     {
       "id": "tubes-mono",
-      "title": "Light Tubes · Mono",
+      "title": "Light Tubes \u00b7 Mono",
       "family": "tubes",
       "file": "tubes-mono.html",
       "built": "2026-09-30T05:07:31.983Z"
     },
     {
       "id": "tubes-low",
-      "title": "Light Tubes · Low arcs",
+      "title": "Light Tubes \u00b7 Low arcs",
       "family": "tubes",
       "file": "tubes-low.html",
       "built": "2026-09-30T05:07:31.983Z"
@@ -196,13 +196,6 @@
       "family": "morph",
       "file": "morph.html",
       "built": "2026-09-30T05:07:31.983Z"
-    },
-    {
-      "id": "moon",
-      "title": "Earth + Moon",
-      "family": "moon",
-      "file": "moon.html",
-      "built": "2026-09-30T04:54:48.202Z"
     }
   ]
 }
