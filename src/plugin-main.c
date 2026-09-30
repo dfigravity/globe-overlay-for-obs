@@ -40,7 +40,8 @@ bool obs_module_load(void)
 void obs_module_post_load(void)
 {
 	if (!obs_is_source_configurable("browser_source")) {
-		obs_log(LOG_ERROR, "obs-browser (browser_source) is not available; Globe Overlay source not registered");
+		obs_log(LOG_ERROR,
+			"obs-browser (browser_source) is not available; Globe Overlay source not registered");
 		return;
 	}
 	obs_register_source(&globe_source_info);

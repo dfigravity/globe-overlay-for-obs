@@ -63,8 +63,8 @@ struct globe_source {
 	int fps;
 	char *look;
 	char *channel;
-	char *tweaks_json;   /* last JSON built from settings */
-	struct dstr url;     /* child's current URL */
+	char *tweaks_json; /* last JSON built from settings */
+	struct dstr url;   /* child's current URL */
 
 	/* debounced URL rebuild (set on the UI thread, applied on the graphics thread) */
 	pthread_mutex_t mutex;
@@ -132,7 +132,8 @@ static bool item_is_color_auto_name(const struct gt_item *it, struct dstr *name)
 static void color_to_hex(long long c, char out[8])
 {
 	/* obs colours are 0xAABBGGRR */
-	snprintf(out, 8, "#%02x%02x%02x", (unsigned)(c & 0xff), (unsigned)((c >> 8) & 0xff), (unsigned)((c >> 16) & 0xff));
+	snprintf(out, 8, "#%02x%02x%02x", (unsigned)(c & 0xff), (unsigned)((c >> 8) & 0xff),
+		 (unsigned)((c >> 16) & 0xff));
 }
 
 /* percent-encode for a URL path (keeps '/') or a query value */
@@ -141,8 +142,8 @@ static void url_encode(struct dstr *out, const char *s, bool keep_slash)
 	static const char *hex = "0123456789ABCDEF";
 	for (const unsigned char *p = (const unsigned char *)s; *p; p++) {
 		unsigned char c = *p;
-		bool ok = (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9') || c == '-' || c == '_' ||
-			  c == '.' || c == '~' || (keep_slash && c == '/');
+		bool ok = (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9') || c == '-' ||
+			  c == '_' || c == '.' || c == '~' || (keep_slash && c == '/');
 		if (ok) {
 			dstr_ncat(out, (const char *)&c, 1);
 		} else {
@@ -260,7 +261,8 @@ static void apply_child_settings(struct globe_source *s, bool with_url)
 	obs_data_set_bool(cs, "restart_when_active", false);
 	obs_data_set_bool(cs, "reroute_audio", false);
 	/* body transparent like the stock browser source; the pages are transparent themselves */
-	obs_data_set_string(cs, "css", "body { background-color: rgba(0, 0, 0, 0); margin: 0px auto; overflow: hidden; }");
+	obs_data_set_string(cs, "css",
+			    "body { background-color: rgba(0, 0, 0, 0); margin: 0px auto; overflow: hidden; }");
 	obs_source_update(s->browser, cs);
 	obs_data_release(cs);
 }
@@ -340,7 +342,8 @@ static void globe_update(void *data, obs_data_t *settings)
 		look = DEFAULT_LOOK;
 
 	bool first = s->look == NULL;
-	bool structural = first || strcmp(look, s->look) != 0 || strcmp(channel ? channel : "", s->channel ? s->channel : "") != 0;
+	bool structural = first || strcmp(look, s->look) != 0 ||
+			  strcmp(channel ? channel : "", s->channel ? s->channel : "") != 0;
 	bool size_changed = width != s->width || height != s->height || fps != s->fps;
 
 	char *json = build_tweaks_json(settings);
@@ -364,19 +367,33 @@ static void globe_update(void *data, obs_data_t *settings)
 			const char *ja = "", *jb = "";
 			if (ia) {
 				switch (obs_data_item_gettype(ia)) {
-				case OBS_DATA_NUMBER: obs_data_set_double(tmp_a, "v", obs_data_item_get_double(ia)); break;
-				case OBS_DATA_BOOLEAN: obs_data_set_bool(tmp_a, "v", obs_data_item_get_bool(ia)); break;
-				case OBS_DATA_STRING: obs_data_set_string(tmp_a, "v", obs_data_item_get_string(ia)); break;
-				default: break;
+				case OBS_DATA_NUMBER:
+					obs_data_set_double(tmp_a, "v", obs_data_item_get_double(ia));
+					break;
+				case OBS_DATA_BOOLEAN:
+					obs_data_set_bool(tmp_a, "v", obs_data_item_get_bool(ia));
+					break;
+				case OBS_DATA_STRING:
+					obs_data_set_string(tmp_a, "v", obs_data_item_get_string(ia));
+					break;
+				default:
+					break;
 				}
 				obs_data_item_release(&ia);
 			}
 			if (ib) {
 				switch (obs_data_item_gettype(ib)) {
-				case OBS_DATA_NUMBER: obs_data_set_double(tmp_b, "v", obs_data_item_get_double(ib)); break;
-				case OBS_DATA_BOOLEAN: obs_data_set_bool(tmp_b, "v", obs_data_item_get_bool(ib)); break;
-				case OBS_DATA_STRING: obs_data_set_string(tmp_b, "v", obs_data_item_get_string(ib)); break;
-				default: break;
+				case OBS_DATA_NUMBER:
+					obs_data_set_double(tmp_b, "v", obs_data_item_get_double(ib));
+					break;
+				case OBS_DATA_BOOLEAN:
+					obs_data_set_bool(tmp_b, "v", obs_data_item_get_bool(ib));
+					break;
+				case OBS_DATA_STRING:
+					obs_data_set_string(tmp_b, "v", obs_data_item_get_string(ib));
+					break;
+				default:
+					break;
 				}
 				obs_data_item_release(&ib);
 			}
@@ -412,7 +429,8 @@ static void globe_update(void *data, obs_data_t *settings)
 	if (size_changed)
 		apply_child_settings(s, false);
 
-	obs_log(LOG_INFO, "update: json_changed=%d structural=%d live_only=%d size_changed=%d", json_changed, structural, live_only, size_changed);
+	obs_log(LOG_INFO, "update: json_changed=%d structural=%d live_only=%d size_changed=%d", json_changed,
+		structural, live_only, size_changed);
 	if (structural || (json_changed && !live_only)) {
 		/* debounce: dragging a structural slider rebuilds the URL once it settles */
 		pthread_mutex_lock(&s->mutex);
@@ -722,7 +740,8 @@ static obs_properties_t *globe_get_properties(void *data)
 			obs_property_t *p = NULL;
 			switch (it->type) {
 			case GT_RANGE:
-				p = obs_properties_add_float_slider(gp, it->setting, it->label, it->min, it->max, it->step);
+				p = obs_properties_add_float_slider(gp, it->setting, it->label, it->min, it->max,
+								    it->step);
 				break;
 			case GT_TOGGLE:
 				p = obs_properties_add_bool(gp, it->setting, it->label);
@@ -739,7 +758,8 @@ static obs_properties_t *globe_get_properties(void *data)
 			}
 			case GT_SELECT: {
 				p = obs_properties_add_list(gp, it->setting, it->label, OBS_COMBO_TYPE_LIST,
-							    it->int_options ? OBS_COMBO_FORMAT_INT : OBS_COMBO_FORMAT_STRING);
+							    it->int_options ? OBS_COMBO_FORMAT_INT
+									    : OBS_COMBO_FORMAT_STRING);
 				struct opt_ctx ctx = {.list = p, .it = it, .nlabels = 0};
 				split_iter(it->labels, collect_label, &ctx);
 				split_iter(it->options, add_option, &ctx);
@@ -772,7 +792,8 @@ static obs_properties_t *globe_get_properties(void *data)
 struct obs_source_info globe_source_info = {
 	.id = "globe_overlay_source",
 	.type = OBS_SOURCE_TYPE_INPUT,
-	.output_flags = OBS_SOURCE_VIDEO | OBS_SOURCE_CUSTOM_DRAW | OBS_SOURCE_INTERACTION | OBS_SOURCE_DO_NOT_DUPLICATE,
+	.output_flags = OBS_SOURCE_VIDEO | OBS_SOURCE_CUSTOM_DRAW | OBS_SOURCE_INTERACTION |
+			OBS_SOURCE_DO_NOT_DUPLICATE,
 	.get_name = globe_get_name,
 	.create = globe_create,
 	.destroy = globe_destroy,
