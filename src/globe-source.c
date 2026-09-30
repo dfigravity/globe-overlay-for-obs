@@ -270,13 +270,17 @@ static void push_js_event(struct globe_source *s, const char *name, const char *
 	if (!s->browser)
 		return;
 	proc_handler_t *ph = obs_source_get_proc_handler(s->browser);
-	if (!ph)
+	if (!ph) {
+		obs_log(LOG_WARNING, "no proc handler on browser child");
 		return;
+	}
 	calldata_t cd;
 	calldata_init(&cd);
 	calldata_set_string(&cd, "eventName", name);
 	calldata_set_string(&cd, "jsonString", json ? json : "{}");
-	proc_handler_call(ph, "javascript_event", &cd);
+	bool ok = proc_handler_call(ph, "javascript_event", &cd);
+	if (!ok)
+		obs_log(LOG_WARNING, "javascript_event proc not found on browser child");
 	calldata_free(&cd);
 }
 
@@ -402,11 +406,13 @@ static void globe_update(void *data, obs_data_t *settings)
 	if (first) {
 		build_url(s);
 		apply_child_settings(s, true);
+		obs_log(LOG_INFO, "update: first load, look=%s, url %zu chars", s->look, s->url.len);
 		return;
 	}
 	if (size_changed)
 		apply_child_settings(s, false);
 
+	obs_log(LOG_INFO, "update: json_changed=%d structural=%d live_only=%d size_changed=%d", json_changed, structural, live_only, size_changed);
 	if (structural || (json_changed && !live_only)) {
 		/* debounce: dragging a structural slider rebuilds the URL once it settles */
 		pthread_mutex_lock(&s->mutex);
@@ -414,6 +420,7 @@ static void globe_update(void *data, obs_data_t *settings)
 		s->dirty_at = os_gettime_ns();
 		pthread_mutex_unlock(&s->mutex);
 	} else if (json_changed) {
+		obs_log(LOG_INFO, "update: pushing live settings (%zu bytes)", strlen(json));
 		push_js_event(s, "globeSettings", json);
 	}
 }
@@ -435,6 +442,7 @@ static void globe_video_tick(void *data, float seconds)
 		 * do the same; verify in the test build that no deadlock occurs with the rendering lock. */
 		build_url(s);
 		apply_child_settings(s, true);
+		obs_log(LOG_INFO, "tick: rebuilt url (%zu chars) after structural change", s->url.len);
 	}
 }
 
@@ -586,6 +594,21 @@ static bool refresh_clicked(obs_properties_t *props, obs_property_t *p, void *da
 	return false;
 }
 
+/* picking a colour switches off its "use the look's own colour" box, so the picker just works */
+static bool color_modified(void *priv, obs_properties_t *props, obs_property_t *p, obs_data_t *settings)
+{
+	UNUSED_PARAMETER(props);
+	const struct gt_item *it = priv;
+	struct dstr autoname = {0};
+	item_is_color_auto_name(it, &autoname);
+	/* the picker starts at white (0xFFFFFFFF); any other value means the user chose a colour */
+	if (obs_data_get_int(settings, it->setting) != 0xFFFFFFFF && obs_data_get_bool(settings, autoname.array))
+		obs_data_set_bool(settings, autoname.array, false);
+	dstr_free(&autoname);
+	UNUSED_PARAMETER(p);
+	return true;
+}
+
 /* show/hide family-specific groups when the look changes */
 static bool look_modified(void *priv, obs_properties_t *props, obs_property_t *p, obs_data_t *settings)
 {
@@ -706,11 +729,12 @@ static obs_properties_t *globe_get_properties(void *data)
 				break;
 			case GT_COLOR: {
 				item_is_color_auto_name(it, &autoname);
+				p = obs_properties_add_color(gp, it->setting, it->label);
+				obs_property_set_modified_callback2(p, color_modified, (void *)it);
 				struct dstr lbl = {0};
 				dstr_printf(&lbl, "%s: %s", it->label, obs_module_text("UseLookColour"));
 				obs_properties_add_bool(gp, autoname.array, lbl.array);
 				dstr_free(&lbl);
-				p = obs_properties_add_color(gp, it->setting, it->label);
 				break;
 			}
 			case GT_SELECT: {
