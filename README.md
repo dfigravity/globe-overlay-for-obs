@@ -27,12 +27,28 @@ Nothing else. No Homebrew, no Node, no local web server.
 Download the latest build from the **Releases** page.
 
 **Windows**
+
+Easiest: run `globe-overlay-for-obs-<version>-windows-x64-installer.exe` from
+the Releases page (quit OBS first). It installs to
+`C:\ProgramData\obs-studio\plugins\globe-overlay-for-obs\` and needs no admin rights.
+
+Manual, from the `.zip`:
 1. Quit OBS.
-2. Unzip. Inside is one folder, `globe-overlay-for-obs`, containing `bin` and `data`.
-3. Copy that folder into `C:\ProgramData\obs-studio\plugins\` (the folder is
-   hidden; paste the path into File Explorer's address bar; create `plugins` if
-   it is missing).
+2. Unzip. You get one folder, `globe-overlay-for-obs`, with `bin` and `data` inside.
+3. Copy that **whole folder** to `C:\ProgramData\obs-studio\plugins\`, so you end up with
+   ```
+   C:\ProgramData\obs-studio\plugins\globe-overlay-for-obs\bin\64bit\globe-overlay-for-obs.dll
+   C:\ProgramData\obs-studio\plugins\globe-overlay-for-obs\data\...
+   ```
+   `ProgramData` is hidden: paste the path into File Explorer's address bar.
+   Create the `plugins` folder if it isn't there.
 4. Start OBS.
+
+Do **not** put the folder inside `C:\Program Files\obs-studio\obs-plugins\64bit\`.
+That older location expects the DLL to sit there by itself, and OBS will not
+look inside a subfolder. (If you must use it: put `globe-overlay-for-obs.dll`
+directly in `obs-plugins\64bit\` and the contents of `data` in
+`C:\Program Files\obs-studio\data\obs-plugins\globe-overlay-for-obs\`.)
 
 **macOS** (Intel and Apple Silicon)
 1. Quit OBS.
@@ -70,7 +86,7 @@ sits over your camera or game.
 
 ## Uninstall
 
-Delete the plugin folder (Windows: `C:\ProgramData\obs-studio\plugins\globe-overlay-for-obs`;
+Delete the plugin folder (Windows: run the uninstaller from Settings → Apps, or delete `C:\ProgramData\obs-studio\plugins\globe-overlay-for-obs`;
 macOS: `~/Library/Application Support/obs-studio/plugins/globe-overlay-for-obs.plugin`;
 Linux: `sudo apt remove globe-overlay-for-obs`) and restart OBS.
 

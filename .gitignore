@@ -33,3 +33,4 @@ release/*.pkg
 .DS_Store
 !build-local-macos.sh
 !package-macos.sh
+!/installer

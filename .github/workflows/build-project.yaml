@@ -290,6 +290,22 @@ jobs:
           config: ${{ needs.check-event.outputs.config }}
           package: ${{ fromJSON(needs.check-event.outputs.package) }}
 
+      - name: Build Installer 💿
+        run: |
+          # Build Installer 💿 (Inno Setup ships on the GitHub Windows runners)
+          $Name = "${{ steps.setup.outputs.pluginName }}"
+          $Version = "${{ steps.setup.outputs.pluginVersion }}"
+          $Zip = Get-ChildItem -Path release -Filter "${Name}-${Version}-windows-x64.zip" | Select-Object -First 1
+          if ( -not $Zip ) { Write-Warning "no package zip found, skipping installer"; return }
+          $Stage = Join-Path $Env:RUNNER_TEMP "installer-src"
+          if ( Test-Path $Stage ) { Remove-Item -Recurse -Force $Stage }
+          Expand-Archive -Path $Zip.FullName -DestinationPath $Stage
+          $Root = Join-Path $Stage $Name
+          $Iscc = "${Env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe"
+          if ( -not ( Test-Path $Iscc ) ) { Write-Warning "Inno Setup not found, skipping installer"; return }
+          & $Iscc "/DPluginName=${Name}" "/DPluginVersion=${Version}" "/DSourceDir=${Root}" installer\windows.iss
+          Get-ChildItem release
+
       - name: Upload Artifacts 📡
         uses: actions/upload-artifact@v4
         with:
