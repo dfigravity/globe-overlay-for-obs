@@ -240,6 +240,8 @@ static void build_url(struct globe_source *s)
 		dstr_cat(&s->url, "&channel=");
 		url_encode(&s->url, s->channel, false);
 	}
+	/* OBS's property sheet is the UI; never draw the in-page panel or its gear in the source */
+	dstr_cat(&s->url, "&nopanel=1");
 }
 
 static void apply_child_settings(struct globe_source *s, bool with_url)
@@ -584,16 +586,6 @@ static bool refresh_clicked(obs_properties_t *props, obs_property_t *p, void *da
 	return false;
 }
 
-static bool panel_clicked(obs_properties_t *props, obs_property_t *p, void *data)
-{
-	UNUSED_PARAMETER(props);
-	UNUSED_PARAMETER(p);
-	struct globe_source *s = data;
-	if (s)
-		push_js_event(s, "globeOpenPanel", "{}");
-	return false;
-}
-
 /* show/hide family-specific groups when the look changes */
 static bool look_modified(void *priv, obs_properties_t *props, obs_property_t *p, obs_data_t *settings)
 {
@@ -743,7 +735,6 @@ static obs_properties_t *globe_get_properties(void *data)
 	dstr_free(&autoname);
 
 	obs_properties_add_button2(props, "refresh", obs_module_text("Refresh"), refresh_clicked, s);
-	obs_properties_add_button2(props, "open_panel", obs_module_text("OpenPanel"), panel_clicked, s);
 
 	/* apply family visibility for the current look */
 	if (s) {

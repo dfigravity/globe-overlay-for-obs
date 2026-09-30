@@ -48,7 +48,16 @@ static const struct gt_item GT_ITEMS[] = {
 	{ "ocean.size", "gt_ocean_size", GT_RANGE, 0.5, 3, 0.05, 1, "", false, false, "", "", "Particle size", "", "Ocean current", 6, "wind", "", false },
 	{ "ocean.alpha", "gt_ocean_alpha", GT_RANGE, 0.25, 3, 0.05, 1, "", false, false, "", "", "Brightness", "1.0 = faint, 2.0 = stronger", "Ocean current", 6, "wind", "", false },
 	{ "ocean.color", "gt_ocean_color", GT_COLOR, 0, 0, 0, 0, "", false, false, "", "", "Colour", "\"\" = pale blue", "Ocean current", 6, "wind", "", true },
-	{ "invert", "gt_invert", GT_SELECT, 0, 0, 0, 0, "", false, true, "0|1|2", "off|swap light/dark, keep colours|full negative", "Invert", "0 = off · 1 = swap light and dark but keep colours · 2 = full negative, colours flip too", "Colours", 7, "", "", true },
+	{ "moon.command", "gt_moon_command", GT_TEXT, 0, 0, 0, 0, "!moon", false, false, "", "", "Chat command", "viewers type e.g. \"!moon Tycho\" or \"!moon Sea of Tranquility\" in Twitch chat", "Moon", 7, "moon", "!moon", false },
+	{ "moon.twitchChannel", "gt_moon_twitchChannel", GT_TEXT, 0, 0, 0, 0, "", false, false, "", "", "Twitch channel", "\"\" = the check-in channel name", "Moon", 7, "moon", "same as your check-in channel", false },
+	{ "moon.pinColor", "gt_moon_pinColor", GT_COLOR, 0, 0, 0, 0, "#8fe9ff", false, false, "", "", "Moon pin colour", "moon check-ins: pin and name", "Moon", 7, "moon", "", true },
+	{ "moon.size", "gt_moon_size", GT_RANGE, 0.3, 1, 0.05, 0.62, "", false, false, "", "", "Moon size", "relative to Earth (real is 0.27)", "Moon", 7, "moon", "", false },
+	{ "moon.spin", "gt_moon_spin", GT_RANGE, 0, 3, 0.1, 1.2, "", false, false, "", "", "Moon spin", "1.0 = one turn per three Earth turns; 0 = still", "Moon", 7, "moon", "", true },
+	{ "moon.phase", "gt_moon_phase", GT_RANGE, -180, 180, 5, 55, "", false, false, "", "", "Sun angle", "where the sunlight comes from; the night side is transparent", "Moon", 7, "moon", "", true },
+	{ "moon.terminator", "gt_moon_terminator", GT_RANGE, 0.02, 0.6, 0.02, 0.22, "", false, false, "", "", "Shadow softness", "how gradual the day/night edge is", "Moon", 7, "moon", "", true },
+	{ "moon.landmarks", "gt_moon_landmarks", GT_TOGGLE, 0, 0, 0, 0, "", false, false, "", "", "Landmark labels", "maria, craters and landing sites", "Moon", 7, "moon", "", true },
+	{ "moon.relief", "gt_moon_relief", GT_RANGE, 0, 3, 0.1, 1.4, "", false, false, "", "", "Crater relief", "shading strength from the elevation map", "Moon", 7, "moon", "", true },
+	{ "invert", "gt_invert", GT_SELECT, 0, 0, 0, 0, "", false, true, "0|1|2", "off|swap light/dark, keep colours|full negative", "Invert", "0 = off · 1 = swap light and dark but keep colours · 2 = full negative, colours flip too", "Colours", 8, "", "", true },
 };
 static const size_t GT_COUNT = sizeof(GT_ITEMS) / sizeof(GT_ITEMS[0]);
-static const int GT_GROUP_COUNT = 8;
+static const int GT_GROUP_COUNT = 9;
