@@ -37,6 +37,7 @@ with this program. If not, see <https://www.gnu.org/licenses/>
  */
 
 #include <stdio.h>
+#include <math.h>
 #include <stdlib.h>
 #include <string.h>
 #include <obs-module.h>
@@ -73,7 +74,14 @@ struct globe_source {
 
 	bool showing;
 	bool active;
+
+	/* Randomize / Reset buttons: one context per settings group (+ one for "all", index GT_MAX_GROUPS) */
+	struct group_btn {
+		struct globe_source *s;
+		int group;
+	} btn[33];
 };
+#define GT_MAX_GROUPS 32
 
 /* ---------- looks manifest (data/looks/manifest.json) ---------- */
 
@@ -334,6 +342,14 @@ static void globe_update(void *data, obs_data_t *settings)
 	struct globe_source *s = data;
 
 	const char *look = obs_data_get_string(settings, S_LOOK);
+	/* one Channel field in the sheet: scenes saved before may hold the link in the schema's (now hidden) field — move it once */
+	const char *old_link = obs_data_get_string(settings, "gt_channel");
+	if (old_link && *old_link) {
+		const char *cur = obs_data_get_string(settings, S_CHANNEL);
+		if (!cur || !*cur)
+			obs_data_set_string(settings, S_CHANNEL, old_link);
+		obs_data_unset_user_value(settings, "gt_channel");
+	}
 	const char *channel = obs_data_get_string(settings, S_CHANNEL);
 	uint32_t width = (uint32_t)obs_data_get_int(settings, S_WIDTH);
 	uint32_t height = (uint32_t)obs_data_get_int(settings, S_HEIGHT);
@@ -612,6 +628,148 @@ static bool refresh_clicked(obs_properties_t *props, obs_property_t *p, void *da
 	return false;
 }
 
+/* ---------- Randomize / Reset ---------- */
+static double rnd01(void)
+{
+	return (double)rand() / ((double)RAND_MAX + 1.0);
+}
+
+/* items a Randomize/Reset button acts on: its group (or every group for -1), never the link or Invert */
+static bool button_targets(const struct gt_item *it, int group)
+{
+	if (group >= 0 && it->group_index != group)
+		return false;
+	return strcmp(it->key, "channel") != 0 && strcmp(it->key, "invert") != 0 && it->type != GT_TEXT;
+}
+
+static void apply_and_refresh(struct globe_source *s, obs_data_t *settings)
+{
+	UNUSED_PARAMETER(settings);
+	obs_source_update(s->source,
+			  NULL); /* settings were edited in place; this runs globe_update → live push / URL rebuild */
+}
+
+static bool randomize_clicked(obs_properties_t *props, obs_property_t *p, void *data)
+{
+	UNUSED_PARAMETER(props);
+	UNUSED_PARAMETER(p);
+	struct group_btn *b = data;
+	if (!b || !b->s)
+		return false;
+	static bool seeded = false;
+	if (!seeded) {
+		srand((unsigned)os_gettime_ns());
+		seeded = true;
+	}
+	obs_data_t *settings = obs_source_get_settings(b->s->source);
+	struct dstr autoname = {0};
+	for (size_t i = 0; i < GT_COUNT; i++) {
+		const struct gt_item *it = &GT_ITEMS[i];
+		if (!button_targets(it, b->group))
+			continue;
+		switch (it->type) {
+		case GT_RANGE: {
+			/* biased toward the default: up to 70% of the way to either end, so results stay usable */
+			double u = rnd01(), d = it->def_num;
+			double v = d + (u < 0.5 ? (it->min - d) : (it->max - d)) * fabs(2.0 * u - 1.0) * 0.7;
+			if (it->step > 0)
+				v = it->min + floor((v - it->min) / it->step + 0.5) * it->step;
+			obs_data_set_double(settings, it->setting, fmin(it->max, fmax(it->min, v)));
+			break;
+		}
+		case GT_TOGGLE:
+			obs_data_set_bool(settings, it->setting, rnd01() < 0.6 ? it->def_bool : !it->def_bool);
+			break;
+		case GT_COLOR: {
+			/* a vivid colour: random hue, high saturation and value (OBS stores 0xAABBGGRR) */
+			double h = rnd01() * 6.0, sat = 0.55 + 0.45 * rnd01(), val = 0.8 + 0.2 * rnd01();
+			double c = val * sat, x = c * (1.0 - fabs(fmod(h, 2.0) - 1.0)), m = val - c, r = 0, g = 0,
+			       bl = 0;
+			int hi = (int)h;
+			if (hi == 0) {
+				r = c;
+				g = x;
+			} else if (hi == 1) {
+				r = x;
+				g = c;
+			} else if (hi == 2) {
+				g = c;
+				bl = x;
+			} else if (hi == 3) {
+				g = x;
+				bl = c;
+			} else if (hi == 4) {
+				r = x;
+				bl = c;
+			} else {
+				r = c;
+				bl = x;
+			}
+			long long col = 0xFF000000LL | ((long long)((bl + m) * 255) << 16) |
+					((long long)((g + m) * 255) << 8) | (long long)((r + m) * 255);
+			obs_data_set_int(settings, it->setting, col);
+			item_is_color_auto_name(it, &autoname);
+			obs_data_set_bool(settings, autoname.array, rnd01() < 0.3); /* sometimes keep the look's own */
+			break;
+		}
+		case GT_SELECT: {
+			int n = 1;
+			for (const char *c = it->options; *c; c++)
+				n += *c == '|';
+			int pick = (int)(rnd01() * n), idx = 0;
+			const char *cur = it->options;
+			while (idx < pick && cur) {
+				cur = strchr(cur, '|');
+				if (cur)
+					cur++;
+				idx++;
+			}
+			if (!cur)
+				break;
+			const char *bar = strchr(cur, '|');
+			char val[48];
+			snprintf(val, sizeof(val), "%.*s", (int)(bar ? (size_t)(bar - cur) : strlen(cur)), cur);
+			if (it->int_options)
+				obs_data_set_int(settings, it->setting, atoll(val));
+			else
+				obs_data_set_string(settings, it->setting, val);
+			break;
+		}
+		default:
+			break;
+		}
+	}
+	dstr_free(&autoname);
+	apply_and_refresh(b->s, settings);
+	obs_data_release(settings);
+	return true; /* redraw the sheet so the sliders show the new values */
+}
+
+static bool reset_clicked(obs_properties_t *props, obs_property_t *p, void *data)
+{
+	UNUSED_PARAMETER(props);
+	UNUSED_PARAMETER(p);
+	struct group_btn *b = data;
+	if (!b || !b->s)
+		return false;
+	obs_data_t *settings = obs_source_get_settings(b->s->source);
+	struct dstr autoname = {0};
+	for (size_t i = 0; i < GT_COUNT; i++) {
+		const struct gt_item *it = &GT_ITEMS[i];
+		if (!button_targets(it, b->group) && !(b->group < 0 && strcmp(it->key, "invert") == 0))
+			continue;
+		obs_data_unset_user_value(settings, it->setting);
+		if (it->type == GT_COLOR) {
+			item_is_color_auto_name(it, &autoname);
+			obs_data_unset_user_value(settings, autoname.array);
+		}
+	}
+	dstr_free(&autoname);
+	apply_and_refresh(b->s, settings);
+	obs_data_release(settings);
+	return true;
+}
+
 /* picking a colour switches off its "use the look's own colour" box, so the picker just works */
 static bool color_modified(void *priv, obs_properties_t *props, obs_property_t *p, obs_data_t *settings)
 {
@@ -732,11 +890,15 @@ static obs_properties_t *globe_get_properties(void *data)
 	for (int g = 0; g < GT_GROUP_COUNT; g++) {
 		obs_properties_t *gp = obs_properties_create();
 		const char *title = "";
+		int n_items = 0;
 		for (size_t i = 0; i < GT_COUNT; i++) {
 			const struct gt_item *it = &GT_ITEMS[i];
 			if (it->group_index != g)
 				continue;
+			if (strcmp(it->key, "channel") == 0)
+				continue; /* the top-level Channel field is the one place for the link */
 			title = it->group;
+			n_items++;
 			obs_property_t *p = NULL;
 			switch (it->type) {
 			case GT_RANGE:
@@ -772,12 +934,34 @@ static obs_properties_t *globe_get_properties(void *data)
 			if (p && it->note && it->note[0])
 				obs_property_set_long_description(p, it->note);
 		}
+		if (!n_items) {
+			obs_properties_destroy(gp);
+			continue;
+		}
+		bool has_targets = false; /* only groups a button can change get Randomize / Reset */
+		for (size_t i = 0; i < GT_COUNT && !has_targets; i++)
+			has_targets = button_targets(&GT_ITEMS[i], g);
+		if (s && g < GT_MAX_GROUPS && has_targets) {
+			char bn[40];
+			s->btn[g] = (struct group_btn){s, g};
+			snprintf(bn, sizeof(bn), "rand_%d", g);
+			obs_properties_add_button2(gp, bn, obs_module_text("Randomize"), randomize_clicked, &s->btn[g]);
+			snprintf(bn, sizeof(bn), "reset_%d", g);
+			obs_properties_add_button2(gp, bn, obs_module_text("Reset"), reset_clicked, &s->btn[g]);
+		}
 		char name[32];
 		snprintf(name, sizeof(name), "grp_%d", g);
 		obs_properties_add_group(props, name, title, OBS_GROUP_NORMAL, gp);
 	}
 	dstr_free(&autoname);
 
+	if (s) {
+		s->btn[GT_MAX_GROUPS] = (struct group_btn){s, -1};
+		obs_properties_add_button2(props, "rand_all", obs_module_text("RandomizeAll"), randomize_clicked,
+					   &s->btn[GT_MAX_GROUPS]);
+		obs_properties_add_button2(props, "reset_all", obs_module_text("ResetAll"), reset_clicked,
+					   &s->btn[GT_MAX_GROUPS]);
+	}
 	obs_properties_add_button2(props, "refresh", obs_module_text("Refresh"), refresh_clicked, s);
 
 	/* apply family visibility for the current look */
