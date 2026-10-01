@@ -72,8 +72,7 @@ struct globe_source {
 	bool url_dirty;
 	uint64_t dirty_at;
 
-	bool showing;
-	bool active;
+	uint64_t repush_at; /* re-send live settings once the page has reloaded after a URL rebuild */
 
 	/* Randomize / Reset buttons: one context per settings group (+ one for "all", index GT_MAX_GROUPS) */
 	struct group_btn {
@@ -231,6 +230,13 @@ static void build_url(struct globe_source *s)
 	struct dstr file = {0};
 	dstr_printf(&file, "looks/%s.html", s->look);
 	char *path = obs_module_file(file.array);
+	if (path) { /* legacy Windows layout returns a relative path; the page URL needs an absolute one */
+		char *abs = os_get_abs_path_ptr(path);
+		if (abs) {
+			bfree(path);
+			path = abs;
+		}
+	}
 	dstr_free(&file);
 	dstr_copy(&s->url, "http://absolute/");
 	if (path) {
@@ -311,7 +317,13 @@ static void *globe_create(obs_data_t *settings, obs_source_t *source)
 	pthread_mutex_init(&s->mutex, NULL);
 	dstr_init(&s->url);
 
-	s->browser = obs_source_create_private("browser_source", obs_source_get_name(source), NULL);
+	obs_data_t *cs = obs_data_create(); /* start blank at the right size; the first update sets the page */
+	obs_data_set_string(cs, "url", "about:blank");
+	obs_data_set_bool(cs, "is_local_file", false);
+	obs_data_set_int(cs, "width", 1920);
+	obs_data_set_int(cs, "height", 1080);
+	s->browser = obs_source_create_private("browser_source", obs_source_get_name(source), cs);
+	obs_data_release(cs);
 	if (!s->browser)
 		obs_log(LOG_ERROR, "could not create browser_source child; is the obs-browser plugin installed?");
 
@@ -323,10 +335,6 @@ static void globe_destroy(void *data)
 {
 	struct globe_source *s = data;
 	if (s->browser) {
-		if (s->active)
-			obs_source_remove_active_child(s->source, s->browser);
-		if (s->showing)
-			obs_source_dec_showing(s->browser);
 		obs_source_release(s->browser);
 	}
 	bfree(s->look);
@@ -439,13 +447,14 @@ static void globe_update(void *data, obs_data_t *settings)
 	if (first) {
 		build_url(s);
 		apply_child_settings(s, true);
+		s->repush_at = os_gettime_ns() + 3000000000ull;
 		obs_log(LOG_INFO, "update: first load, look=%s, url %zu chars", s->look, s->url.len);
 		return;
 	}
 	if (size_changed)
 		apply_child_settings(s, false);
 
-	obs_log(LOG_INFO, "update: json_changed=%d structural=%d live_only=%d size_changed=%d", json_changed,
+	obs_log(LOG_DEBUG, "update: json_changed=%d structural=%d live_only=%d size_changed=%d", json_changed,
 		structural, live_only, size_changed);
 	if (structural || (json_changed && !live_only)) {
 		/* debounce: dragging a structural slider rebuilds the URL once it settles */
@@ -454,7 +463,7 @@ static void globe_update(void *data, obs_data_t *settings)
 		s->dirty_at = os_gettime_ns();
 		pthread_mutex_unlock(&s->mutex);
 	} else if (json_changed) {
-		obs_log(LOG_INFO, "update: pushing live settings (%zu bytes)", strlen(json));
+		obs_log(LOG_DEBUG, "update: pushing live settings (%zu bytes)", strlen(json));
 		push_js_event(s, "globeSettings", json);
 	}
 }
@@ -463,6 +472,11 @@ static void globe_video_tick(void *data, float seconds)
 {
 	UNUSED_PARAMETER(seconds);
 	struct globe_source *s = data;
+	if (s->repush_at &&
+	    os_gettime_ns() > s->repush_at) { /* the page has (re)loaded: make sure it has the latest live values */
+		s->repush_at = 0;
+		push_js_event(s, "globeSettings", s->tweaks_json);
+	}
 	bool apply = false;
 	pthread_mutex_lock(&s->mutex);
 	if (s->url_dirty && os_gettime_ns() - s->dirty_at > URL_DEBOUNCE_NS) {
@@ -477,6 +491,7 @@ static void globe_video_tick(void *data, float seconds)
 		build_url(s);
 		apply_child_settings(s, true);
 		obs_log(LOG_INFO, "tick: rebuilt url (%zu chars) after structural change", s->url.len);
+		s->repush_at = os_gettime_ns() + 3000000000ull;
 	}
 }
 
@@ -496,42 +511,6 @@ static uint32_t globe_get_width(void *data)
 static uint32_t globe_get_height(void *data)
 {
 	return ((struct globe_source *)data)->height;
-}
-
-static void globe_activate(void *data)
-{
-	struct globe_source *s = data;
-	if (s->browser && !s->active) {
-		obs_source_add_active_child(s->source, s->browser);
-		s->active = true;
-	}
-}
-
-static void globe_deactivate(void *data)
-{
-	struct globe_source *s = data;
-	if (s->browser && s->active) {
-		obs_source_remove_active_child(s->source, s->browser);
-		s->active = false;
-	}
-}
-
-static void globe_show(void *data)
-{
-	struct globe_source *s = data;
-	if (s->browser && !s->showing) {
-		obs_source_inc_showing(s->browser);
-		s->showing = true;
-	}
-}
-
-static void globe_hide(void *data)
-{
-	struct globe_source *s = data;
-	if (s->browser && s->showing) {
-		obs_source_dec_showing(s->browser);
-		s->showing = false;
-	}
 }
 
 static void globe_enum_active_sources(void *data, obs_source_enum_proc_t cb, void *param)
@@ -600,6 +579,8 @@ static void globe_get_defaults(obs_data_t *settings)
 		case GT_COLOR:
 			item_is_color_auto_name(it, &autoname);
 			obs_data_set_default_bool(settings, autoname.array, it->def_str[0] == 0);
+			dstr_cat(&autoname, "_last"); /* hidden: last picked value (color_modified) */
+			obs_data_set_default_int(settings, autoname.array, 0xFFFFFFFF);
 			obs_data_set_default_int(settings, it->setting, 0xFFFFFFFF);
 			break;
 		case GT_SELECT:
@@ -622,8 +603,11 @@ static bool refresh_clicked(obs_properties_t *props, obs_property_t *p, void *da
 	UNUSED_PARAMETER(p);
 	struct globe_source *s = data;
 	if (s && s->browser) {
-		build_url(s);
-		apply_child_settings(s, true);
+		obs_properties_t *bp = obs_source_properties(s->browser);
+		obs_property_t *btn = bp ? obs_properties_get(bp, "refreshnocache") : NULL;
+		if (btn)
+			obs_property_button_clicked(btn, s->browser);
+		obs_properties_destroy(bp);
 	}
 	return false;
 }
@@ -708,6 +692,12 @@ static bool randomize_clicked(obs_properties_t *props, obs_property_t *p, void *
 			long long col = 0xFF000000LL | ((long long)((bl + m) * 255) << 16) |
 					((long long)((g + m) * 255) << 8) | (long long)((r + m) * 255);
 			obs_data_set_int(settings, it->setting, col);
+			{
+				struct dstr last = {0};
+				dstr_printf(&last, "%s_last", it->setting);
+				obs_data_set_int(settings, last.array, col);
+				dstr_free(&last);
+			}
 			item_is_color_auto_name(it, &autoname);
 			obs_data_set_bool(settings, autoname.array, rnd01() < 0.3); /* sometimes keep the look's own */
 			break;
@@ -727,7 +717,7 @@ static bool randomize_clicked(obs_properties_t *props, obs_property_t *p, void *
 			if (!cur)
 				break;
 			const char *bar = strchr(cur, '|');
-			char val[48];
+			char val[128];
 			snprintf(val, sizeof(val), "%.*s", (int)(bar ? (size_t)(bar - cur) : strlen(cur)), cur);
 			if (it->int_options)
 				obs_data_set_int(settings, it->setting, atoll(val));
@@ -762,6 +752,8 @@ static bool reset_clicked(obs_properties_t *props, obs_property_t *p, void *data
 		if (it->type == GT_COLOR) {
 			item_is_color_auto_name(it, &autoname);
 			obs_data_unset_user_value(settings, autoname.array);
+			dstr_cat(&autoname, "_last");
+			obs_data_unset_user_value(settings, autoname.array);
 		}
 	}
 	dstr_free(&autoname);
@@ -770,18 +762,23 @@ static bool reset_clicked(obs_properties_t *props, obs_property_t *p, void *data
 	return true;
 }
 
-/* picking a colour switches off its "use the look's own colour" box, so the picker just works */
+/* picking a colour switches off its "use the look's own colour" box, so the picker just works. The last value seen is
+ * kept in a hidden "<setting>_last" so reopening the sheet (which re-runs this) never unticks it, and white is pickable */
 static bool color_modified(void *priv, obs_properties_t *props, obs_property_t *p, obs_data_t *settings)
 {
 	UNUSED_PARAMETER(props);
-	const struct gt_item *it = priv;
-	struct dstr autoname = {0};
-	item_is_color_auto_name(it, &autoname);
-	/* the picker starts at white (0xFFFFFFFF); any other value means the user chose a colour */
-	if (obs_data_get_int(settings, it->setting) != 0xFFFFFFFF && obs_data_get_bool(settings, autoname.array))
-		obs_data_set_bool(settings, autoname.array, false);
-	dstr_free(&autoname);
 	UNUSED_PARAMETER(p);
+	const struct gt_item *it = priv;
+	struct dstr autoname = {0}, last = {0};
+	item_is_color_auto_name(it, &autoname);
+	dstr_printf(&last, "%s_last", it->setting);
+	long long cur = obs_data_get_int(settings, it->setting);
+	if (cur != obs_data_get_int(settings, last.array)) {
+		obs_data_set_int(settings, last.array, cur);
+		obs_data_set_bool(settings, autoname.array, false);
+	}
+	dstr_free(&autoname);
+	dstr_free(&last);
 	return true;
 }
 
@@ -847,7 +844,7 @@ static void collect_label(const char *tok, size_t len, int idx, void *ctx)
 static void add_option(const char *tok, size_t len, int idx, void *ctx)
 {
 	struct opt_ctx *c = ctx;
-	char val[48];
+	char val[128];
 	snprintf(val, sizeof(val), "%.*s", (int)len, tok);
 	const char *label = idx < c->nlabels && c->labels[idx][0] ? c->labels[idx] : val;
 	if (c->it->int_options)
@@ -988,10 +985,6 @@ struct obs_source_info globe_source_info = {
 	.get_height = globe_get_height,
 	.video_tick = globe_video_tick,
 	.video_render = globe_video_render,
-	.activate = globe_activate,
-	.deactivate = globe_deactivate,
-	.show = globe_show,
-	.hide = globe_hide,
 	.enum_active_sources = globe_enum_active_sources,
 	.mouse_click = globe_mouse_click,
 	.mouse_move = globe_mouse_move,
