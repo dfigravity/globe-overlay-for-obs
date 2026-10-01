@@ -3,11 +3,11 @@
 An OBS Studio source that shows a live, spinning globe of where your viewers
 are. Viewers check in from Twitch chat (through [Triode's check-in
 service](https://checkin.triodeofficial.com)) and a pin with their name appears
-at their location. Twenty-eight looks to choose from, every visual setting
+at their location. Thirty-seven looks to choose from, every visual setting
 exposed in the source's properties, no server to run, nothing to host.
 
-> Status: **0.1.0, early test release.** It works, it has been used on stream,
-> and it will have rough edges. Please report problems in Issues with your OBS
+> Status: **0.2.0, test release.** It works, it has been used on stream,
+> and it may still have rough edges. See [CHANGELOG.md](CHANGELOG.md) for what's new. Please report problems in Issues with your OBS
 > log attached (Help → Log Files → Upload Current Log File).
 
 ## What you need
@@ -18,7 +18,8 @@ exposed in the source's properties, no server to run, nothing to host.
   `!checkin` messages become pins. Without one the source still works but only
   shows other people's globes (paste their check-in link).
 - **An internet connection while streaming**: the source connects to Triode's
-  server for check-ins and loads the Inter font from Google Fonts.
+  server for check-ins and loads its fonts from Google Fonts (if either is
+  unreachable the globe still shows, and reconnects on its own).
 
 Nothing else. No Homebrew, no Node, no local web server.
 
@@ -65,14 +66,16 @@ Flatpak OBS is not supported by this package.
 ## Set up
 
 1. Sources → **+** → **Globe Overlay (check-in globe)**.
-2. **Look**: pick one of the 28 (Ink on Paper is the default).
-3. **Triode check-in link**: paste your check-in page link
+2. **Look**: pick one of the 37 (Ink on Paper is the default).
+3. **Channel**: paste your Triode check-in page link
    (`https://checkin.triodeofficial.com/YourChannel`) or just your channel name.
 4. Width/height default to 1920×1080 and 60 FPS.
-5. Everything else lives in the groups below: Names, Pins, Pin trails, Rings
-   under your pin, Hurricane and Ocean current (wind looks), Land, Colours.
-   Sliders and colours apply live. Colour pickers take effect as soon as you
-   pick a colour.
+5. Everything else lives in the groups below: Names (size, height, direction,
+   font), Crowded names, Pins, Pin trails, Rings under your pin, the look's own
+   group (e.g. Star chart, Thermal vision), Land, Ocean and Colours. Sliders and
+   colours apply live, and every group has 🎲 Randomize and ↺ Reset buttons.
+   Looks with their own colour menu use it; choose "Use Continent colours" there
+   to use the Land group's colours instead.
 
 Your own check-in appears as the gold pin. Right-click the source → *Interact*
 if you want to drive the look with the mouse.
@@ -81,8 +84,10 @@ if you want to drive the look with the mouse.
 
 Wind Trails (7 variants, including Ink on Paper), Light Tubes (6), Particle
 Earth, Gooey Earth, Storm Shell, Voxel Earth (9), ASCII Terminal, Username
-Continents, Unfolding Projections. Oceans are always transparent, so the globe
-sits over your camera or game.
+Continents, Unfolding Projections, Vector Scope, Field Notebook, Stained Glass,
+Paper Cut, 1-Bit, Star Chart, Thermal Vision, Liquid Chrome and Synthwave.
+Oceans are see-through (only a faint animation shows), so the globe sits over
+your camera or game.
 
 ## Uninstall
 
@@ -102,6 +107,8 @@ building from source.
 
 Plugin code: GPL-2.0-or-later, built on
 [obs-plugintemplate](https://github.com/obsproject/obs-plugintemplate).
-Looks use [three.js](https://threejs.org) (MIT), Natural Earth land data
-(public domain) and the Inter font (OFL). Check-ins are provided by Triode's
+Looks use [three.js](https://threejs.org) (MIT), [d3](https://d3js.org) (ISC),
+Natural Earth land data (public domain) and Google Fonts families under the
+SIL Open Font License (Inter, JetBrains Mono, Inconsolata, Caveat, Silkscreen,
+Nunito, Bebas Neue, Permanent Marker, Playfair Display, Orbitron). Check-ins are provided by Triode's
 check-in service, which is a separate product with its own terms.

@@ -38,7 +38,7 @@
     },
     "name": "globe-overlay-for-obs",
     "displayName": "Globe Overlay for OBS",
-    "version": "0.1.0",
+    "version": "0.2.0",
     "author": "Vince Olshove",
     "website": "https://github.com/dfigravity/globe-overlay-for-obs",
     "email": "volshove@gmail.com"
