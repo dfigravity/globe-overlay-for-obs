@@ -1,5 +1,23 @@
 # Changelog
 
+## Unreleased
+
+From the first outside test (thanks to Osh's friend on Windows).
+
+### New
+- **Connections** (every look): draw arcs between check-ins — thin glowing lines or lit tubes like the
+  Light Tubes look — from your pin to everyone, chained in check-in order, or each to its nearest neighbour.
+  Thickness, arc height, glow, pulses and colour are all live. Off by default.
+- The source now has its own icon in the Sources list instead of the stock Browser icon.
+
+### Changed
+- Look-specific settings groups now sit right under the look picker, above the shared Names / Pins /
+  Trails groups, so a look's own options are the first thing you see.
+
+### Fixed
+- Changing **FPS** (or width/height) no longer throws away colours and other live changes: the page is
+  reloaded with every current setting and the live values are pushed again once it is back.
+
 ## 0.2.0 — 2026-10-01
 
 A big step up: nine new looks (37 in total), every setting working in every look,

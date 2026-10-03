@@ -451,8 +451,15 @@ static void globe_update(void *data, obs_data_t *settings)
 		obs_log(LOG_INFO, "update: first load, look=%s, url %zu chars", s->look, s->url.len);
 		return;
 	}
-	if (size_changed)
-		apply_child_settings(s, false);
+	if (size_changed) {
+		/* obs-browser recreates its CEF browser on an fps/size change, which reloads the page and
+		 * discards sessionStorage. Rebuild the URL first so the reload carries every current value
+		 * (colours etc. that had only been pushed live), and re-push once the page is back. */
+		build_url(s);
+		apply_child_settings(s, true);
+		s->repush_at = os_gettime_ns() + 3000000000ull;
+		obs_log(LOG_INFO, "update: size/fps change, reloaded with current settings");
+	}
 
 	obs_log(LOG_DEBUG, "update: json_changed=%d structural=%d live_only=%d size_changed=%d", json_changed,
 		structural, live_only, size_changed);
@@ -970,6 +977,18 @@ static obs_properties_t *globe_get_properties(void *data)
 	return props;
 }
 
+/* Source-list icon (OBS 28+ asks per theme; the returned string is freed by OBS). */
+static const char *globe_dark_icon(void *type_data)
+{
+	UNUSED_PARAMETER(type_data);
+	return obs_module_file("icons/globe-dark.svg");
+}
+static const char *globe_light_icon(void *type_data)
+{
+	UNUSED_PARAMETER(type_data);
+	return obs_module_file("icons/globe-light.svg");
+}
+
 struct obs_source_info globe_source_info = {
 	.id = "globe_overlay_source",
 	.type = OBS_SOURCE_TYPE_INPUT,
@@ -991,7 +1010,9 @@ struct obs_source_info globe_source_info = {
 	.mouse_wheel = globe_mouse_wheel,
 	.focus = globe_focus,
 	.key_click = globe_key_click,
-	.icon_type = OBS_ICON_TYPE_BROWSER,
+	.icon_type = OBS_ICON_TYPE_CUSTOM,
+	.get_dark_icon = globe_dark_icon,
+	.get_light_icon = globe_light_icon,
 };
 
 void globe_source_free_module_data(void)
