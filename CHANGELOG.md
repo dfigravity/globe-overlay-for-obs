@@ -9,7 +9,9 @@ Fixes and one feature from the first outside test (thanks to the Windows tester)
   Light Tubes look — from your pin to everyone, chained in check-in order, or each to its nearest neighbour.
   Thickness, arc height, glow, pulses and colour are all live, and they can meet the pins at the head
   (where the name floats) or at the base. Off by default.
-- The source now has its own icon in the Sources list instead of the stock Browser icon.
+- The source can show its own globe icon in the Sources list instead of the stock Browser icon. OBS only
+  allows this from 32.2.0, and only in builds compiled against those headers; the downloadable packages are
+  still built against OBS 31 headers, so they keep the Browser icon for now.
 
 ### Changed
 - Look-specific settings groups now sit right under the look picker, above the shared Names / Pins /

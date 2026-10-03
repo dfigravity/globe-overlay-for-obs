@@ -977,7 +977,11 @@ static obs_properties_t *globe_get_properties(void *data)
 	return props;
 }
 
-/* Source-list icon (OBS 28+ asks per theme; the returned string is freed by OBS). */
+/* Source-list icon. libobs gained per-theme custom icons for third-party sources in 32.2.0
+ * (get_dark_icon / get_light_icon; the returned string is freed by OBS). Builds against older
+ * headers keep the stock Browser icon. */
+#define GLOBE_HAS_CUSTOM_ICON (LIBOBS_API_VER >= MAKE_SEMANTIC_VERSION(32, 2, 0))
+#if GLOBE_HAS_CUSTOM_ICON
 static const char *globe_dark_icon(void *type_data)
 {
 	UNUSED_PARAMETER(type_data);
@@ -988,6 +992,7 @@ static const char *globe_light_icon(void *type_data)
 	UNUSED_PARAMETER(type_data);
 	return obs_module_file("icons/globe-light.svg");
 }
+#endif
 
 struct obs_source_info globe_source_info = {
 	.id = "globe_overlay_source",
@@ -1010,9 +1015,13 @@ struct obs_source_info globe_source_info = {
 	.mouse_wheel = globe_mouse_wheel,
 	.focus = globe_focus,
 	.key_click = globe_key_click,
+#if GLOBE_HAS_CUSTOM_ICON
 	.icon_type = OBS_ICON_TYPE_CUSTOM,
 	.get_dark_icon = globe_dark_icon,
 	.get_light_icon = globe_light_icon,
+#else
+	.icon_type = OBS_ICON_TYPE_BROWSER,
+#endif
 };
 
 void globe_source_free_module_data(void)
