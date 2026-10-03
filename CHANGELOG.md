@@ -1,8 +1,8 @@
 # Changelog
 
-## Unreleased
+## 0.2.1 — 2026-10-03
 
-From the first outside test (thanks to Osh's friend on Windows).
+Fixes and one feature from the first outside test (thanks to the Windows tester).
 
 ### New
 - **Connections** (every look): draw arcs between check-ins — thin glowing lines or lit tubes like the
@@ -18,6 +18,10 @@ From the first outside test (thanks to Osh's friend on Windows).
 ### Fixed
 - Changing **FPS** (or width/height) no longer throws away colours and other live changes: the page is
   reloaded with every current setting and the live values are pushed again once it is back.
+- Star Chart: the backdrop disc (the sea) follows the Ocean colour, not the Land colour.
+- Connections in the canvas looks (Star Chart, Vector Scope, Field Notebook, ASCII, Unfolding Projections):
+  arcs end cleanly at the horizon instead of drawing saw teeth and stray fragments along the limb, and fade
+  out instead of vanishing when both pins turn behind the globe.
 
 ## 0.2.0 — 2026-10-01
 
