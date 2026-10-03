@@ -1,5 +1,18 @@
 # Changelog
 
+## Unreleased (0.2.2)
+
+### New
+- **Background** group (every look): a tinted fill behind the globe so it stands out on busy scenes — a soft
+  disc behind the globe (size and edge softness) or the whole frame — with colour and opacity.
+- **New check-in** group (every look): a one-off effect when someone checks in — pulse the pin, a flash, a
+  shockwave on the surface, or a beam from above — with strength, duration and colour; the new pin's
+  Connections tube flares too (optional). "Auto" picks a style per look.
+- **Land** group: **Landmass opacity** and **Coastline opacity** sliders. **Ocean opacity** now goes to 0.
+- **Username Continents**: a check-in's name is written on the continent or island it came from, as large as
+  fits, along the landmass's long axis; islands too small for a legible name get it written right beside them
+  with a leader line. Filler names dim behind the located ones (slider), smallest size is a setting.
+
 ## 0.2.1 — 2026-10-03
 
 Fixes and one feature from the first outside test (thanks to the Windows tester).
