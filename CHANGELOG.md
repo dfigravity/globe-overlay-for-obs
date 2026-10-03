@@ -7,7 +7,8 @@ From the first outside test (thanks to Osh's friend on Windows).
 ### New
 - **Connections** (every look): draw arcs between check-ins — thin glowing lines or lit tubes like the
   Light Tubes look — from your pin to everyone, chained in check-in order, or each to its nearest neighbour.
-  Thickness, arc height, glow, pulses and colour are all live. Off by default.
+  Thickness, arc height, glow, pulses and colour are all live, and they can meet the pins at the head
+  (where the name floats) or at the base. Off by default.
 - The source now has its own icon in the Sources list instead of the stock Browser icon.
 
 ### Changed
