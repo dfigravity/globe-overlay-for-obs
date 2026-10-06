@@ -111,4 +111,4 @@ Looks use [three.js](https://threejs.org) (MIT), [d3](https://d3js.org) (ISC),
 Natural Earth land data (public domain) and Google Fonts families under the
 SIL Open Font License (Inter, JetBrains Mono, Inconsolata, Caveat, Silkscreen,
 Nunito, Bebas Neue, Permanent Marker, Playfair Display, Orbitron). Check-ins are provided by Triode's
-check-in service, which is a separate product with its own terms.
+check-in service, which is a separate product with its own terms (https://triodeofficial.com/).
