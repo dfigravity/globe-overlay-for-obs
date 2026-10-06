@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased (0.2.2)
+## 0.2.2 — 2026-10-06
 
 ### New
 - **Background** group (every look): a tinted fill behind the globe so it stands out on busy scenes — a soft
@@ -10,8 +10,12 @@
   Connections tube flares too (optional). "Auto" picks a style per look.
 - **Land** group: **Landmass opacity** and **Coastline opacity** sliders. **Ocean opacity** now goes to 0.
 - **Username Continents**: a check-in's name is written on the continent or island it came from, as large as
-  fits, along the landmass's long axis; islands too small for a legible name get it written right beside them
-  with a leader line. Filler names dim behind the located ones (slider), smallest size is a setting.
+  fits near the check-in and on the same side of any sea, along the landmass's long axis; islands too small
+  for a legible name get it written right beside them with a leader line. Filler names dim behind the located
+  ones (slider), smallest size is a setting.
+
+### Fixed
+- Ocean opacity 0 used to fall back to full strength in every look; it now hides the sea pattern.
 
 ## 0.2.1 — 2026-10-03
 
